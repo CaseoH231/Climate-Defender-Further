@@ -1,0 +1,77 @@
+/* ======================================================================
+   EXTRAS: styles for the climate, policy, goals and settings features.
+   Uses the colour variables from style.css.
+   ====================================================================== */
+
+.t-temp { --c: var(--orange); }
+.t-temp.t-hot1 { --c: #ff8a3d; }
+.t-temp.t-hot2 { --c: var(--red); }
+.t-temp.t-hot2 b, .t-temp.t-hot3 b { color: #d93b3b; }
+.t-temp.t-hot3 { --c: #c0392b; background: #fff1f1; }
+
+#extraBuildMenu { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.build-sub { margin: 18px 0 10px; font-size: 1.05rem; }
+
+#speedButton { min-width: 64px; }
+
+/* Segmented buttons */
+.seg { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 12px; }
+.seg button { padding: 7px 12px; border: 2px solid var(--line); border-radius: 12px; background: #fff; color: var(--ink); font-weight: 800; font-size: 0.88rem; cursor: pointer; }
+.seg button.on { background: var(--blue); border-color: var(--blue); color: #fff; }
+.seg button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+#taxBox, #loanBox { margin-bottom: 14px; }
+#taxBox h3, #loanBox h3, #programList h3 { margin: 10px 0 4px; font-size: 1.05rem; }
+.learn-note { color: var(--muted); font-size: 0.85rem; font-weight: 700; }
+
+/* Policy cards */
+.program-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-top: 8px; }
+.program { display: flex; flex-direction: column; gap: 6px; padding: 12px; border: 2px solid var(--line); border-radius: 16px; background: #fff; box-shadow: var(--shadow); }
+.pg-top { display: flex; align-items: center; gap: 8px; font-family: Fredoka, Nunito, sans-serif; }
+.pg-top .ic { font-size: 1.4rem; }
+.program p { color: var(--muted); font-size: 0.8rem; font-weight: 700; line-height: 1.3; flex: 1; }
+.pips { display: flex; gap: 5px; }
+.pips i { width: 100%; height: 8px; border-radius: 6px; background: #e3edf7; }
+.pips i.on { background: var(--green); }
+.program button { padding: 8px 10px; border: 0; border-radius: 12px; background: var(--green); color: #fff; font-family: Fredoka, Nunito, sans-serif; font-size: 0.95rem; box-shadow: 0 3px 0 var(--green-d); cursor: pointer; }
+.program button:disabled { background: #cfdbe7; color: #8aa0b5; box-shadow: none; cursor: not-allowed; }
+
+/* Stats */
+.stat-row { display: flex; justify-content: space-between; padding: 7px 4px; border-bottom: 1px solid var(--line); }
+#historyChart { width: 100%; height: auto; border: 2px solid var(--line); border-radius: 14px; background: #fff; }
+
+/* Goals */
+.goal-card { padding: 14px; border: 2px solid var(--line); border-radius: 16px; background: #fff; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 6px; }
+.goal-card b { font-family: Fredoka, Nunito, sans-serif; font-size: 1.1rem; }
+.check { font-weight: 800; color: var(--muted); }
+.check.ok { color: var(--green-d); }
+.ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-top: 8px; }
+.ach { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 8px; border: 2px dashed var(--line); border-radius: 14px; text-align: center; opacity: 0.6; background: #f6fbff; }
+.ach.on { opacity: 1; border: 2px solid var(--yellow); background: #fffbea; }
+.ach span { font-size: 1.6rem; }
+.ach small { color: var(--muted); font-size: 0.72rem; line-height: 1.2; }
+
+/* Scenario picker */
+.scenario-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
+.scenario-card { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 14px; border: 2px solid var(--line); border-radius: 18px; background: #fff; color: var(--ink); text-align: left; cursor: pointer; box-shadow: var(--shadow); transition: transform 0.12s; }
+.scenario-card:hover { transform: translateY(-3px); border-color: var(--blue); }
+.scenario-card .sc-ic { font-size: 2rem; }
+.scenario-card b { font-family: Fredoka, Nunito, sans-serif; font-size: 1.1rem; }
+.scenario-card small { color: var(--muted); font-weight: 700; line-height: 1.3; }
+.scenario-card em { font-style: normal; font-size: 0.82rem; color: var(--green-d); font-weight: 800; margin-top: 4px; }
+
+/* Settings */
+.set-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.set-row small { display: block; color: var(--muted); font-weight: 700; font-size: 0.8rem; }
+.set-row select { padding: 8px 10px; border: 2px solid var(--line); border-radius: 10px; font: inherit; }
+.set-row input[type="checkbox"] { width: 22px; height: 22px; }
+
+/* Toasts */
+.toasts { position: fixed; right: 16px; bottom: 16px; display: flex; flex-direction: column; gap: 8px; z-index: 50; pointer-events: none; }
+.toast { padding: 10px 16px; border-radius: 14px; background: #fff; border: 2px solid var(--green); box-shadow: var(--shadow); font-family: Fredoka, Nunito, sans-serif; animation: toast-in 0.25s ease-out; }
+.toast.bad { border-color: var(--red); background: #fff1f1; }
+@keyframes toast-in { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
+.bad-text { color: #d63b3b; }
+.program .chips { margin-top: 0; gap: 4px; }
+.program .chip { font-size: 0.72rem; }
+.scenario-card .stars { font-size: 0.78rem; color: var(--muted); font-weight: 800; }

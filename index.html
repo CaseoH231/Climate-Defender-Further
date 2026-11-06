@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Climate Defender</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="extras.css" />
+    <link rel="stylesheet" href="map.css" />
+  </head>
+
+  <body>
+    <header class="topbar">
+      <h1>🌎 Climate Defender</h1>
+
+      <div class="topbar-controls">
+        <div id="countdown">Next Month: 8s</div>
+        <button id="pauseButton" onclick="togglePause()">⏸ Pause</button>
+        <button id="endMonthButton" class="primary" onclick="manualAdvanceMonth()">▶ End Month</button>
+        <button class="ghost" id="speedButton" onclick="cycleSpeed()">⏩ 1×</button>
+        <button class="ghost" onclick="openSettings()" title="Settings">⚙</button>
+        <button class="ghost" onclick="newGame()">↺ New</button>
+      </div>
+    </header>
+
+    <div class="container">
+      <!-- Big numbers -->
+
+      <div class="hud">
+        <div class="tile t-money">
+          <span class="ti">💰</span>
+          <div><b id="money"></b><small>Money</small></div>
+        </div>
+        <div class="tile t-people">
+          <span class="ti">👥</span>
+          <div><b id="population"></b><small>People</small></div>
+        </div>
+        <div class="tile t-happy">
+          <span class="ti">😊</span>
+          <div><b id="approval"></b><small>Happiness</small></div>
+        </div>
+        <div class="tile t-pollution">
+          <span class="ti">🏭</span>
+          <div><b id="pollution"></b><small>Pollution</small></div>
+        </div>
+        <div class="tile t-power">
+          <span class="ti">⚡</span>
+          <div><b id="power"></b><small>Power</small></div>
+        </div>
+        <div class="tile t-temp">
+          <span class="ti">🌡</span>
+          <div><b id="tempValue"></b><small>Warming</small></div>
+        </div>
+        <div class="tile t-climate">
+          <span class="ti">🌍</span>
+          <div>
+            <b id="climateScore"></b>
+            <small>Climate score</small>
+            <progress id="climateBar" value="100" max="100"></progress>
+          </div>
+        </div>
+      </div>
+
+      <div id="energyBalance">Energy Balance</div>
+
+      <!-- Coach and fact: tap to read more -->
+
+      <div class="banners">
+        <div class="coach-banner clamp">
+          <span class="avatar">🧑‍🏫</span>
+          <div>
+            <strong id="coachTitle">Climate Coach</strong>
+            <p id="coachText"></p>
+          </div>
+        </div>
+
+        <div class="fact-banner clamp">
+          <span class="avatar">💡</span>
+          <div>
+            <strong>Did you know?</strong>
+            <p id="fact">Loading climate fact...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- The city -->
+
+      <section class="card map-card">
+        <div class="map-head">
+          <span class="chip-pill" id="date"></span>
+          <span class="chip-pill" id="weather"></span>
+        </div>
+
+        <div id="cityView" class="city-view">
+          <div id="cityMap" class="city-map" role="img" aria-label="City map. Pick a building in the Build tab, then click a tile to place it.">
+            <div id="mapScene" class="map-scene"></div>
+          </div>
+        </div>
+
+        <div id="mapInfo" class="map-info"></div>
+        <div id="cityStatus" class="city-status"></div>
+
+        <div class="ticker"><span>📰</span><span id="ticker"></span></div>
+      </section>
+
+      <!-- Tabs -->
+
+      <section class="card tabs-card">
+        <nav class="tabs" id="tabs">
+          <button class="tab active" data-tab="tabBuild">🏗 Build</button>
+          <button class="tab" data-tab="tabResearch">🔬 Research</button>
+          <button class="tab" data-tab="tabPolicy">🌍 Policy</button>
+          <button class="tab" data-tab="tabStats">📈 Stats</button>
+          <button class="tab" data-tab="tabGoals">🏆 Goals</button>
+          <button class="tab" data-tab="tabNews">📰 News</button>
+          <button class="tab" data-tab="tabWords">📖 Words</button>
+          <button class="tab" data-tab="tabDetails">📊 Details</button>
+        </nav>
+
+        <div class="tab-panel active" id="tabBuild">
+          <div id="buildMenu"></div>
+        </div>
+
+        <div class="tab-panel" id="tabPolicy">
+          <div id="taxBox"></div>
+          <div id="loanBox"></div>
+          <div id="programList"></div>
+        </div>
+
+        <div class="tab-panel" id="tabStats">
+          <div id="climateStats"></div>
+          <div id="chartTabs" class="seg"></div>
+          <canvas id="historyChart" width="640" height="240"></canvas>
+        </div>
+
+        <div class="tab-panel" id="tabGoals">
+          <div id="goalBox"></div>
+          <div id="achievementList"></div>
+        </div>
+
+        <div class="tab-panel" id="tabResearch">
+          <p id="researchStatus">No active research.</p>
+          <progress id="researchBar" value="0" max="100"></progress>
+          <div id="researchButtons"></div>
+        </div>
+
+        <div class="tab-panel" id="tabNews">
+          <div id="news"><div class="news-item">Welcome to Climate Defender.</div></div>
+        </div>
+
+        <div class="tab-panel" id="tabWords">
+          <p class="words-count">📖 <span id="glossaryCount"></span></p>
+          <div id="glossaryList"></div>
+        </div>
+
+        <div class="tab-panel" id="tabDetails">
+          <h3>Weather</h3>
+          <p id="weatherInfo" class="learn-note"></p>
+
+          <h3>Power</h3>
+          <p id="energyMix"></p>
+
+          <h3>Pollution report</h3>
+          <div id="pollutionReport"></div>
+
+          <h3>Buildings</h3>
+          <div class="infra">
+            <p id="solar"></p>
+            <p id="wind"></p>
+            <p id="coal"></p>
+            <p id="forest"></p>
+            <p id="battery"></p>
+            <p id="capture"></p>
+            <p id="nuclear" hidden></p>
+            <p id="nuclearWaste" hidden></p>
+            <p id="offices"></p>
+            <p id="factories"></p>
+          </div>
+
+          <h3>Money facts</h3>
+          <div class="infra">
+            <p id="gdpPerCapita"></p>
+            <p id="gdpGrowth"></p>
+            <p id="totalGDP"></p>
+            <p id="upkeepInfo"></p>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- EVENT MODAL -->
+
+    <div id="eventModal" class="modal">
+      <div class="modal-content">
+        <h2 id="eventTitle">Event Title</h2>
+
+        <div class="modal-body">
+          <p id="eventDescription"></p>
+
+          <div class="learn-grid">
+            <div class="learn-box">
+              <h3>📚 Learn</h3>
+              <p id="eventEducation"></p>
+            </div>
+
+            <details class="learn-box real">
+              <summary>🌍 In real life</summary>
+              <p id="eventRealLife"></p>
+            </details>
+          </div>
+        </div>
+
+        <div class="modal-footer choices">
+          <div class="choice">
+            <button id="eventAccept" class="primary">Accept</button>
+            <div id="eventAcceptStats" class="chips"></div>
+          </div>
+
+          <div class="choice">
+            <button id="eventDecline">Decline</button>
+            <div id="eventDeclineStats" class="chips"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- YEARLY REPORT -->
+
+    <div id="reportModal" class="modal">
+      <div class="modal-content narrow">
+        <h2>📋 Yearly Report</h2>
+
+        <div class="modal-body">
+          <div id="reportText"></div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="primary" onclick="closeReport()">Continue</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- QUIZ -->
+
+    <div id="quizModal" class="modal">
+      <div class="modal-content">
+        <h2>🧠 Climate Quiz</h2>
+
+        <div class="modal-body">
+          <p id="quizQuestion"></p>
+          <div id="quizOptions"></div>
+          <p id="quizFeedback"></p>
+        </div>
+
+        <div class="modal-footer">
+          <button id="quizContinue" class="primary" onclick="closeQuiz()">Continue</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- GAME OVER -->
+
+    <div id="gameOverModal" class="modal">
+      <div class="modal-content narrow">
+        <h2>Game Over</h2>
+
+        <div class="modal-body">
+          <div id="gameOverText"></div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="primary" onclick="newGame(true)">Restart Game</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCENARIO PICKER -->
+
+    <div id="scenarioModal" class="modal">
+      <div class="modal-content">
+        <h2>🌎 Choose your city</h2>
+        <div class="modal-body">
+          <div id="scenarioList" class="scenario-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+
+    <div id="settingsModal" class="modal">
+      <div class="modal-content narrow">
+        <h2>⚙ Settings</h2>
+        <div class="modal-body">
+          <label class="set-row"><span>Difficulty<small>Higher years mean tighter money and harsher events</small></span>
+            <select id="setDiff" onchange="applySetting('diff')">
+              <option value="3">Year 3</option><option value="4">Year 4</option><option value="5">Year 5</option><option value="6">Year 6</option>
+              <option value="7">Year 7</option><option value="8">Year 8</option><option value="9">Year 9</option><option value="10">Year 10</option>
+              <option value="11">Year 11</option><option value="12">Year 12</option>
+            </select></label>
+          <label class="set-row"><span>Quiz questions<small>Pop-up climate quizzes</small></span><input type="checkbox" id="setQuiz" onchange="applySetting('quiz')" /></label>
+          <label class="set-row"><span>Sound<small>Beeps and chimes</small></span><input type="checkbox" id="setSound" onchange="applySetting('sound')" /></label>
+          <label class="set-row"><span>Volume<small>How loud the sounds are</small></span><input type="range" id="setVolume" min="0" max="100" step="5" oninput="applySetting('volume')" /></label>
+        </div>
+        <div class="modal-footer"><button class="primary" onclick="closeSettings()">Done</button></div>
+      </div>
+    </div>
+
+    <!-- WIN -->
+
+    <div id="winModal" class="modal">
+      <div class="modal-content narrow">
+        <h2>🏆 Goal reached</h2>
+        <div class="modal-body"><div id="winText"></div></div>
+        <div class="modal-footer">
+          <button onclick="keepPlaying()">Keep playing</button>
+          <button class="primary" onclick="newGame(true)">New game</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="toasts" class="toasts"></div>
+
+    <script src="facts.js"></script>
+    <script src="events.js"></script>
+    <script src="research.js"></script>
+    <script src="upgrades.js"></script>
+    <script src="weather.js"></script>
+    <script src="learning.js"></script>
+    <script src="climate.js"></script>
+    <script src="research2.js"></script>
+    <script src="energy2.js"></script>
+    <script src="programs.js"></script>
+    <script src="scenarios.js"></script>
+    <script src="extras.js"></script>
+    <script src="script.js"></script>
+    <script src="buildings.js"></script>
+    <script src="map.js"></script>
+    <script src="main.js"></script>
+  </body>
+</html>

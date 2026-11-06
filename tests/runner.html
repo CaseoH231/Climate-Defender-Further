@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Climate Defender tests</title>
+    <style>
+      body { font: 14px/1.4 Consolas, monospace; margin: 16px; }
+      iframe { width: 1100px; height: 800px; border: 1px solid #ccc; }
+    </style>
+  </head>
+  <body>
+    <p>Run with <code>powershell -File tests/run.ps1</code>, or open this page in a browser (Live Server). Add <code>?suite=balance&amp;games=20</code> for the balance bot.</p>
+    <pre id="out">RUNNING</pre>
+    <script src="bot.js"></script>
+    <script src="smoke.js"></script>
+    <script src="map.test.js"></script>
+    <script src="runner.js"></script>
+  </body>
+</html>

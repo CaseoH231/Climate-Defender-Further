@@ -1,0 +1,153 @@
+/* ======================================================================
+   MAP: the angled tile map (map.js). Building art (houses, coal, solar...)
+   is in style.css. This file has the board, terrain, placing and new art.
+   ====================================================================== */
+
+.city-map {
+  aspect-ratio: 16 / 9.5;
+  min-height: 0;
+  border-color: #cfe9f7;
+  background: radial-gradient(ellipse at 50% 35%, #f4fbff, #cdeeff 70%, #b6e2fb);
+}
+.city-map::before { display: none; }
+.map-scene { background: none; overflow: visible; }
+
+.iso { position: absolute; inset: 0; container-type: inline-size; }
+.iso-tiles, .iso-objects { position: absolute; inset: 0; }
+
+/* The dirt edge under the board */
+.iso-skirt { position: absolute; inset: 0; background: linear-gradient(90deg, #a5764e, #c8935f 50%, #8f6440); }
+
+/* ---------- Tiles ---------- */
+
+.tile-cell {
+  position: absolute;
+  width: 6.25%;
+  height: 5.263%;
+  display: grid;
+  place-items: center;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  background: var(--tc, #93d96f);
+  transform: scale(1.035);
+  cursor: pointer;
+}
+.tile-cell::after { content: ""; position: absolute; inset: 0; clip-path: polygon(50% 8%, 92% 50%, 50% 92%, 8% 50%); pointer-events: none; }
+
+.tr-grass { --tc: #93d96f; }
+.tr-grass.alt { --tc: #8ad267; }
+.tr-sand { --tc: #f1d48a; }
+.tr-sand.alt { --tc: #ebcc7e; }
+.tr-beach { --tc: #f7e5ab; }
+.tr-beach.alt { --tc: #f1dc9b; }
+.tr-hills, .tr-vent { background: radial-gradient(ellipse at 50% 62%, #9ad777 0 22%, #69b55a 60%, #5aa650); }
+.tr-rock { background: radial-gradient(ellipse at 50% 64%, #e9e4dc 0 14%, #b4ada2 40%, #8d867c); }
+.tr-farm { background: repeating-linear-gradient(63deg, #dbe37f 0 7%, #c2d067 7% 14%); }
+.tr-woods { --tc: #4f9f55; }
+.tr-woods.alt { --tc: #4a984f; }
+.tr-river, .tr-lake { --tc: #66c6ec; }
+.tr-rapids { background: repeating-linear-gradient(26deg, #66c6ec 0 14%, #d6f4ff 14% 19%); }
+.tr-sea { --tc: #3f9fdc; }
+.tr-sea.alt { --tc: #3c99d5; }
+.tr-shallow { background: radial-gradient(ellipse, #a5e2f7 0 30%, #77ccef 70%); }
+
+.tile-cell.flooded { background: repeating-linear-gradient(26deg, #5ab4e6 0 18%, #82cdf0 18% 24%) !important; }
+.tile-cell.walled { background: repeating-linear-gradient(90deg, #c9c1b2 0 9%, #a89f90 9% 12%) !important; }
+
+.site-mark, .deco { font-size: 1.55cqw; line-height: 1; pointer-events: none; filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.7)); }
+.deco { font-size: 1.7cqw; transform: translateY(-22%); filter: none; }
+.tr-farm .deco { opacity: 0.55; font-size: 1.3cqw; }
+
+/* Placing: valid tiles glow, others dim */
+.tile-cell.hover { filter: brightness(1.18); }
+.tile-cell.can::after { background: rgba(255, 255, 255, 0.38); }
+.tile-cell.can.hover::after { background: rgba(255, 255, 255, 0.75); }
+.tile-cell.cant { filter: saturate(0.55) brightness(0.8); }
+.tile-cell.cant.hover::after { background: rgba(255, 70, 70, 0.4); }
+.tile-cell.doze.hover::after { background: rgba(255, 90, 60, 0.55); }
+.tile-cell.picked::after { background: rgba(255, 214, 64, 0.7); }
+
+/* ---------- Buildings on the board ---------- */
+
+.iso .map-object {
+  z-index: 4;
+  width: 6.4cqw;
+  height: 7.9cqw;
+  font-size: 3.1cqw;
+  transform: translate(-50%, -88%);
+  pointer-events: auto;
+  cursor: pointer;
+}
+.iso .map-object:hover { transform: translate(-50%, -92%) scale(1.08); }
+.iso .map-object.house { width: 5.6cqw; height: 6.9cqw; }
+.iso-objects.passthrough .map-object { pointer-events: none; }
+
+.iso-ghost { z-index: 400 !important; opacity: 0.65; pointer-events: none !important; }
+.iso-ghost.bad { opacity: 0.4; filter: grayscale(1); }
+
+/* Policy badges in the corner of the map */
+.map-badges { position: absolute; z-index: 450; left: 10px; top: 10px; display: flex; flex-wrap: wrap; gap: 4px; max-width: 55%; pointer-events: none; }
+.badge { padding: 2px 7px; border-radius: 10px; background: rgba(255, 255, 255, 0.9); box-shadow: 0 2px 6px rgba(30, 80, 120, 0.15); font-size: 0.85rem; }
+.badge i { margin-left: 2px; color: var(--green-d); font-size: 0.55rem; font-style: normal; letter-spacing: -1px; vertical-align: middle; }
+
+/* The line under the map */
+.map-info { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-height: 2.6em; margin-top: 8px; padding: 6px 12px; border-radius: 12px; background: #f3f9ff; font-size: 0.88rem; }
+.map-info .good { color: #1f8d48; }
+.map-info .bad { color: #d63b3b; }
+.map-info .hint { color: var(--muted); }
+button.mini { padding: 3px 10px; font-size: 0.8rem; }
+
+/* ---------- Build menu tools ---------- */
+
+.tool-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.tool { padding: 6px 12px; }
+.tool-hint { color: var(--muted); font-size: 0.85rem; }
+.shop.selected { border-color: var(--blue); background: #e6f4ff; box-shadow: 0 0 0 3px rgba(63, 164, 255, 0.35), 0 4px 0 var(--line); }
+.tool.selected { border-color: #ff8a5c; background: #ffe9e0; }
+
+/* ---------- Art for the newer buildings ---------- */
+
+.map-object.gas .object-art::before,
+.map-object.gas .object-art::after,
+.map-object.hydro .object-art::before,
+.map-object.hydro .object-art::after,
+.map-object.geo .object-art::before,
+.map-object.geo .object-art::after,
+.map-object.hall .object-art::before,
+.map-object.hall .object-art::after { content: ""; position: absolute; }
+
+/* Gas plant: a pale hall with a flare stack */
+.map-object.gas .object-art::before { left: 12%; right: 26%; bottom: 14%; height: 36%; border: 2px solid #f6f3ea; border-radius: 4px; background: linear-gradient(100deg, #ece7da, #bab29f 75%); box-shadow: 5px 4px 0 #8c8473; }
+.map-object.gas .object-art::after { right: 13%; bottom: 14%; width: 10%; height: 60%; border-radius: 2px; background: linear-gradient(90deg, #8d97a0, #dfe3e6, #8d97a0); }
+.map-object.gas .object-details::before { left: auto; right: 6%; top: 6%; width: 20%; height: 18%; border-radius: 50% 50% 45% 45%; background: radial-gradient(circle at 50% 70%, #fff3a6 0 22%, #ffb02e 45%, #ff6a2b 72%, transparent 74%); box-shadow: none; }
+
+/* Hydro dam: a concrete wall with water spilling out */
+.map-object.hydro .object-art::before { left: 6%; right: 6%; bottom: 16%; height: 42%; background: linear-gradient(180deg, #eef2f4, #a8b4bb); clip-path: polygon(12% 0, 88% 0, 100% 100%, 0 100%); filter: drop-shadow(3px 3px 0 #6f7f88); }
+.map-object.hydro .object-art::after { left: 34%; right: 34%; bottom: 4%; height: 30%; border-radius: 0 0 6px 6px; background: repeating-linear-gradient(180deg, #c9f1ff 0 3px, #5ac1ea 3px 7px); }
+.map-object.hydro .object-details::before { left: 14%; top: 38%; width: 72%; height: 7%; background: #4fb3e3; box-shadow: none; }
+
+/* Geothermal: a low plant, an orange pipe and steam */
+.map-object.geo .object-art::before { left: 10%; right: 32%; bottom: 14%; height: 34%; border: 2px solid #fff4ea; border-radius: 4px; background: linear-gradient(100deg, #f7dcc6, #d9a27e 75%); box-shadow: 5px 4px 0 #a86f4c; }
+.map-object.geo .object-art::after { right: 12%; bottom: 14%; width: 16%; height: 46%; border-radius: 3px 3px 0 0; background: linear-gradient(90deg, #c46a3a, #f39a5e, #c46a3a); }
+.map-object.geo .object-details::before { left: 54%; top: 4%; width: 34%; height: 20%; border-radius: 50%; background: rgba(255, 255, 255, 0.92); box-shadow: -8px 6px 0 rgba(255, 255, 255, 0.65), 9px 4px 0 rgba(255, 255, 255, 0.5); }
+
+/* Offshore wind: a normal turbine standing on a platform */
+.map-object.offshore::after { content: ""; position: absolute; left: 30%; right: 30%; bottom: 3%; height: 9%; border-radius: 50%; background: #f1f8fb; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35); }
+
+/* Town hall: columns and a blue dome */
+.map-object.hall .object-art::before { left: 10%; right: 10%; bottom: 14%; height: 36%; border: 2px solid #fff; border-radius: 3px; background: repeating-linear-gradient(90deg, #fdfbf4 0 12%, #d8d2c2 12% 18%); box-shadow: 5px 4px 0 #a59f8f; }
+.map-object.hall .object-art::after { left: 30%; right: 30%; bottom: 48%; height: 24%; border: 2px solid #fff; border-radius: 50% 50% 0 0; background: linear-gradient(120deg, #a9d8ff, #3f8fd8); }
+.map-object.hall .object-details::before { left: 48%; top: 4%; width: 4%; height: 24%; border-radius: 1px; background: #5b6770; box-shadow: none; }
+.map-object.hall .object-details::after { content: ""; position: absolute; left: 52%; top: 4%; width: 15%; height: 9%; background: #ff6b6b; }
+
+.map-object.gas .object-icon,
+.map-object.hydro .object-icon,
+.map-object.geo .object-icon,
+.map-object.hall .object-icon { margin-top: 10%; font-size: 0.55em; }
+.map-object.offshore .object-icon { opacity: 0.08; font-size: 0.5em; }
+
+/* Phones: the map keeps a playable size and scrolls sideways */
+@media (max-width: 640px) {
+  .city-view { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .city-map { min-width: 620px; }
+}
+.iso-ghost[hidden] { display: none !important; }
