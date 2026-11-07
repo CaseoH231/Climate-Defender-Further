@@ -70,6 +70,11 @@ async function runSmoke() {
   check("console: quizzes = false", w.eval("settings.quizzes") === false);
 
   if (typeof runMapTests === "function") await runMapTests();
+  if (typeof runDistrictTests === "function") await runDistrictTests();
+  if (typeof runGridTests === "function") await runGridTests();
+  if (typeof runPoliticsTests === "function") await runPoliticsTests();
+  if (typeof runTechTreeTests === "function") await runTechTreeTests();
+  if (typeof runBudgetTests === "function") await runBudgetTests();
 }
 
 // Shows the first differing key between two JSON snapshots.

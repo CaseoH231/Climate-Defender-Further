@@ -32,7 +32,7 @@ const TERRAIN = {
 const TERRAIN_CODE = Object.fromEntries(Object.entries(TERRAIN).map(([code, t]) => [t.id, code]));
 const WATER = new Set(["river", "rapids", "sea", "shallow", "lake"]);
 const SEA = new Set(["sea", "shallow"]);
-const TERRAIN_WORDS = { grass: "grass", sand: "desert", beach: "beach", hills: "hills", vent: "a ♨ hot spring", rapids: "a 💧 dam site", shallow: "a 🌊 shallow-sea site" };
+const TERRAIN_WORDS = { grass: "grass", sand: "desert", beach: "beach", hills: "hills", vent: "a ♨ hot spring", rapids: "a 💧 dam site", shallow: "a 🌊 shallow-sea site", sea: "the sea" };
 
 const tileCol = (i) => i % MAP_W;
 const tileRow = (i) => Math.floor(i / MAP_W);
@@ -184,6 +184,11 @@ function generateMap(scenarioId, seed) {
 
   const coastalSea = [...Array(MAP_N).keys()].filter((i) => isSea(i) && neighbours(i).some((j) => t[j] === "beach"));
 
+  // A short coast may not have room for every offshore site, so use the next ring of sea too.
+  if (coastalSea.length < (sites.offshore || 0)) {
+    coastalSea.push(...[...Array(MAP_N).keys()].filter((i) => isSea(i) && !coastalSea.includes(i) && neighbours(i).some((j) => coastalSea.includes(j))));
+  }
+
   pick(coastalSea, sites.offshore || 0, 2).forEach((i) => (t[i] = "shallow"));
 
   const riverTiles = [...Array(MAP_N).keys()].filter((i) => t[i] === "river" && !neighbours(i).some(isSea));
@@ -238,6 +243,7 @@ function generateMap(scenarioId, seed) {
 
   X.map = { seed, t: t.map((id) => TERRAIN_CODE[id]).join(""), b: new Array(MAP_N).fill(null), n: 0, flood: 0, hall };
   X.map.b[hall] = { t: "hall", lv: 0, n: 0 };
+  generateDistricts(); // districts.js
   mapChanged();
 }
 
@@ -341,6 +347,7 @@ function placeProblem(type, i) {
     return (info.note || b.name + " can't go on " + info.name.toLowerCase()) + ". " + b.name + " needs " + wants.join(", ").replace(/, ([^,]*)$/, " or $1");
   }
   if (b.needsWater && !neighbours(i, true).some((j) => WATER.has(terrainAt(j)))) return b.name + " must be next to water for cooling";
+  if (b.needsShore && !neighbours(i).some((j) => !WATER.has(terrainAt(j)))) return b.name + " must be in the sea right next to the shore";
 
   return "";
 }
@@ -390,6 +397,7 @@ function placeBuilding(type, i) {
   if (!canBuy(b.cost)) return false;
 
   money -= b.cost;
+  book("build", -b.cost);
   setTile(i, type, b.add() || 0);
   learnTerm("landuse");
   sfx("build");
@@ -420,6 +428,7 @@ function removeBuildingAt(i, mode = "sell") {
       return false;
     }
     money += b.refund;
+    book("build", b.refund);
   }
 
   X.map.b[i] = null;
@@ -446,7 +455,7 @@ function tilesOf(type) {
 }
 
 // Picks a sensible tile: industry away from homes, offices near the town hall.
-const FAR_FROM_TOWN = ["coal", "gas", "factory", "capture", "nuclear"];
+const FAR_FROM_TOWN = ["coal", "gas", "factory", "capture", "nuclear", "biogas"];
 
 function bestTileFor(type, ignoreRules) {
   const hall = X.map.hall;
@@ -601,6 +610,7 @@ function buildMapDom() {
     `<div class="iso-skirt" style="clip-path:polygon(${skirt})"></div>` +
     `<div class="iso-tiles">${tiles}</div>` +
     `<div class="iso-objects"></div>` +
+    `<div class="iso-labels"></div>` +
     `<div class="map-object iso-ghost" hidden><span class="object-art"><span class="object-details"></span><span class="object-icon"></span></span></div>` +
     `</div>` +
     `<div class="map-badges" id="mapBadges"></div>`;
@@ -609,10 +619,12 @@ function buildMapDom() {
     t: X.map.t,
     tiles: [...scene.querySelectorAll(".tile-cell")],
     objects: scene.querySelector(".iso-objects"),
+    labels: scene.querySelector(".iso-labels"),
     ghost: scene.querySelector(".iso-ghost"),
     badges: scene.querySelector("#mapBadges"),
     rev: -1,
     tool: undefined,
+    overlayView: null,
   };
 }
 
@@ -667,6 +679,8 @@ function renderMap() {
   mapDom.walled = walled;
 
   renderMapBadges();
+  renderMapViews(); // districts.js: the Map / Districts / Air buttons
+  renderDistrictOverlay();
   renderMapInfo();
 }
 
@@ -693,9 +707,16 @@ function renderMapInfo() {
     const b = BUILDINGS[selectedTool];
     const problem = i >= 0 ? placeProblem(selectedTool, i) : "";
 
+    // Smoky buildings warn you when homes are close enough to breathe the smoke.
+    const smokyHomes = i >= 0 && SMOKE[selectedTool] > 0 ? tilesOf("home").filter((h) => tileDistance(h, i) <= 2).length : 0;
+
     html =
       `<b>${b.icon} ${b.name}</b> $${b.cost.toLocaleString()} · ${b.effect()} · upkeep $${b.upkeep}/month` +
-      (i < 0 ? ` <span class="hint">Click a glowing tile to build. Esc to stop.</span>` : problem ? ` <span class="bad">✖ ${problem}.</span>` : ` <span class="good">✔ Click to build here.</span>`);
+      (i < 0
+        ? ` <span class="hint">Click a glowing tile to build. Esc to stop.</span>`
+        : problem
+          ? ` <span class="bad">✖ ${problem}.</span>`
+          : ` <span class="good">✔ Click to build here.</span>` + (smokyHomes ? ` <span class="bad">😷 Smoke would reach ${smokyHomes} home${smokyHomes === 1 ? "" : "s"}.</span>` : ""));
   } else if (i >= 0) {
     const info = TERRAIN[X.map.t[i]];
     const piece = X.map.b[i];
@@ -711,11 +732,13 @@ function renderMapInfo() {
           html += ` <button class="mini" onclick="removeBuildingAt(${i}, 'sell')">${b.refund < 0 ? "Shut down $" + -b.refund : "Sell +$" + b.refund}</button>`;
         }
       } else {
-        html += piece.t === "home" ? " · About " + HOME_PEOPLE.toLocaleString() + " people live here" : " · The heart of your city";
+        html += piece.t === "home" ? " · About " + HOME_PEOPLE.toLocaleString() + " people live here · air: " + airWord(airMap()[i]) : " · The heart of your city";
       }
     } else {
       html = `<b>${where}</b>` + (info.note ? " · " + info.note : "") + (elevation()[i] <= 3 && !isFlooded(i) ? " · 🌊 Low coast: may flood as the sea rises" : "");
     }
+
+    if (X.map.dn) html += ` <span class="hint">· 🏘 ${X.map.dn[districtOf(i)]}</span>`;
   } else {
     html = `<span class="hint">Click a tile to see what's there. Pick a building in the Build tab to place it.</span>`;
   }

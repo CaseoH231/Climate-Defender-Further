@@ -91,6 +91,8 @@
       <section class="card map-card">
         <div class="map-head">
           <span class="chip-pill" id="date"></span>
+          <span class="chip-pill election-chip" id="electionChip" hidden></span>
+          <div class="seg map-views" id="mapViews"></div>
           <span class="chip-pill" id="weather"></span>
         </div>
 
@@ -113,6 +115,9 @@
           <button class="tab active" data-tab="tabBuild">🏗 Build</button>
           <button class="tab" data-tab="tabResearch">🔬 Research</button>
           <button class="tab" data-tab="tabPolicy">🌍 Policy</button>
+          <button class="tab" data-tab="tabBudget">💰 Budget</button>
+          <button class="tab" data-tab="tabDistricts">🏘 Districts</button>
+          <button class="tab" data-tab="tabPeople">🗳 People</button>
           <button class="tab" data-tab="tabStats">📈 Stats</button>
           <button class="tab" data-tab="tabGoals">🏆 Goals</button>
           <button class="tab" data-tab="tabNews">📰 News</button>
@@ -127,7 +132,20 @@
         <div class="tab-panel" id="tabPolicy">
           <div id="taxBox"></div>
           <div id="loanBox"></div>
+          <div id="marketBox"></div>
           <div id="programList"></div>
+        </div>
+
+        <div class="tab-panel" id="tabBudget">
+          <div id="budgetList"></div>
+        </div>
+
+        <div class="tab-panel" id="tabDistricts">
+          <div id="districtList"></div>
+        </div>
+
+        <div class="tab-panel" id="tabPeople">
+          <div id="peopleList"></div>
         </div>
 
         <div class="tab-panel" id="tabStats">
@@ -301,10 +319,21 @@
               <option value="11">Year 11</option><option value="12">Year 12</option>
             </select></label>
           <label class="set-row"><span>Quiz questions<small>Pop-up climate quizzes</small></span><input type="checkbox" id="setQuiz" onchange="applySetting('quiz')" /></label>
+          <label class="set-row"><span>Elections<small>Win the vote every 4 years or lose the game</small></span><input type="checkbox" id="setElections" onchange="applySetting('elections')" /></label>
           <label class="set-row"><span>Sound<small>Beeps and chimes</small></span><input type="checkbox" id="setSound" onchange="applySetting('sound')" /></label>
           <label class="set-row"><span>Volume<small>How loud the sounds are</small></span><input type="range" id="setVolume" min="0" max="100" step="5" oninput="applySetting('volume')" /></label>
         </div>
         <div class="modal-footer"><button class="primary" onclick="closeSettings()">Done</button></div>
+      </div>
+    </div>
+
+    <!-- ELECTION RESULTS -->
+
+    <div id="electionModal" class="modal">
+      <div class="modal-content narrow">
+        <h2>🗳 Election night</h2>
+        <div class="modal-body"><div id="electionText"></div></div>
+        <div class="modal-footer"><button class="primary" onclick="closeElection()">Back to work</button></div>
       </div>
     </div>
 
@@ -338,6 +367,11 @@
     <script src="script.js"></script>
     <script src="buildings.js"></script>
     <script src="map.js"></script>
+    <script src="districts.js"></script>
+    <script src="grid.js"></script>
+    <script src="politics.js"></script>
+    <script src="techtree.js"></script>
+    <script src="budget.js"></script>
     <script src="main.js"></script>
   </body>
 </html>

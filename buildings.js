@@ -50,7 +50,7 @@ const BUILDINGS = {
   },
   forest: {
     icon: "🌳", name: "Forest", group: "nature", cost: 50, refund: 25, upkeep: 3, on: ["grass", "hills", "sand"],
-    effect: () => "Soaks up " + (X.tipped.dieback ? "0.5" : "1") + " pollution/month",
+    effect: () => "Soaks up " + forestCleaning() + " pollution/month",
     add() {
       forest++;
       pollution -= 2;
@@ -65,7 +65,7 @@ const BUILDINGS = {
   battery: {
     icon: "🔋", name: "Battery", group: "power", cost: 1200, refund: 600, upkeep: 8, on: LAND,
     unlocked: () => batteryUnlocked, lockText: "Research Battery Technology first",
-    effect: () => "Stores " + BATTERY_CAPACITY + " MW of spare power",
+    effect: () => "Stores " + Math.round(BATTERY_CAPACITY * (1 + techEffect("battery"))) + " MW of spare power",
     add() {
       batteries++;
       learnTerm("storage");
@@ -73,7 +73,7 @@ const BUILDINGS = {
     },
     remove() {
       batteries--;
-      batteryCharge = Math.min(batteryCharge, batteries * BATTERY_CAPACITY);
+      batteryCharge = Math.min(batteryCharge, batteryStore());
     },
   },
   nuclear: {
@@ -98,7 +98,7 @@ const BUILDINGS = {
   capture: {
     icon: "☁", name: "Carbon Capture", group: "nature", cost: 1500, refund: 750, upkeep: 25, on: LAND,
     unlocked: () => carbonCaptureUnlocked, lockText: "Research Carbon Capture first",
-    effect: () => "Removes 4 pollution/month · uses " + CAPTURE_MW + " MW",
+    effect: () => "Removes " + captureCleaning() + " pollution/month · uses " + CAPTURE_MW + " MW",
     add() {
       capturePlants++;
       learnTerm("carboncapture");
@@ -134,6 +134,7 @@ const BUILDINGS = {
     remove() {
       factories--;
       pollution -= 8;
+      jobsLost(2);
     },
   },
   coal: {
@@ -149,18 +150,21 @@ const BUILDINGS = {
     remove() {
       coal--;
       approval -= X.mods.coalJobs; // in a mining town, closing a plant costs jobs
+      jobsLost(2 + X.mods.coalJobs); // politics.js: workers remember
     },
   },
 };
 
 // The extra power plants keep their numbers in EXTRA_PLANTS (energy2.js).
-const EXTRA_TERRAIN = { gas: LAND, hydro: ["rapids"], geo: ["vent"], offshore: ["shallow"] };
-const EXTRA_TERMS = { gas: ["gasplant", "fossilfuel"], hydro: ["hydro"], geo: ["geothermal"], offshore: ["renewable"] };
+const EXTRA_TERRAIN = { gas: LAND, hydro: ["rapids"], geo: ["vent"], offshore: ["shallow"], tidal: ["sea"], biogas: LAND };
+const EXTRA_TERMS = { gas: ["gasplant", "fossilfuel"], hydro: ["hydro"], geo: ["geothermal"], offshore: ["renewable"], tidal: ["tidal"], biogas: ["biogas"] };
 const EXTRA_HINTS = {
   gas: "+60 MW · +1 pollution/month · cheap, but still burns fossil fuel",
   hydro: "+80 MW, steady (less in heatwaves) · goes on 💧 river rapids",
   geo: "+50 MW, day and night · goes on a ♨ hot spring",
   offshore: "+90 MW when windy · goes on 🌊 shallow sea",
+  tidal: "+45 MW, steady with the tides · goes in the sea right next to the shore",
+  biogas: "+25 MW, steady · catches methane: −1 pollution/month",
 };
 
 for (const id in EXTRA_PLANTS) {
@@ -168,7 +172,7 @@ for (const id in EXTRA_PLANTS) {
 
   BUILDINGS[id] = {
     icon: p.icon, name: p.name, group: "power", cost: p.cost, refund: Math.floor(p.cost / 2), upkeep: p.upkeep,
-    extra: true, on: EXTRA_TERRAIN[id],
+    extra: true, on: EXTRA_TERRAIN[id], needsShore: id === "tidal",
     unlocked: p.needs ? () => researchProjects[p.needs].unlocked : undefined,
     lockText: p.needs ? "Research " + researchProjects[p.needs].name + " first" : "",
     effect: () => EXTRA_HINTS[id],
@@ -179,6 +183,7 @@ for (const id in EXTRA_PLANTS) {
     },
     remove() {
       X.plants[id]--;
+      if (id === "gas") jobsLost(1);
     },
   };
 }
@@ -289,7 +294,7 @@ function renderBuildMenu() {
   if (hint) {
     hint.textContent =
       "Pick a building, then click a tile on the map. Building upkeep: $" + buildingUpkeep().toLocaleString() + "/month" +
-      (extra > 0 ? " (big city: +" + extra + "% on everything, each new building adds 2.5%)" : "");
+      (extra > 0 ? " (big city: +" + extra + "% on everything, each new building adds 2%)" : "");
   }
 
   const bulldoze = box.querySelector('[data-tool="bulldoze"]');

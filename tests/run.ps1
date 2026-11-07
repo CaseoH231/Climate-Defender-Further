@@ -6,7 +6,8 @@ param(
   [string]$Suite = "smoke",
   [int]$Games = 10,
   [string]$Diff = "6,9,12",
-  [string]$Scenario = "classic,coastal,desert,mining,island"
+  [string]$Scenario = "classic,coastal,desert,mining,island",
+  [int]$TimeoutMinutes = 90
 )
 
 $browser = @(
@@ -26,7 +27,22 @@ $outFile = Join-Path $env:TEMP ("cd-test-" + [guid]::NewGuid() + ".html")
 $argList = @("--headless=new", "--disable-gpu", "--no-first-run", "--allow-file-access-from-files",
   "--user-data-dir=$userDir", "--virtual-time-budget=100000000", "--dump-dom", $url)
 
-$p = Start-Process -FilePath $browser -ArgumentList $argList -RedirectStandardOutput $outFile -RedirectStandardError "$outFile.err" -Wait -PassThru -NoNewWindow
+$p = Start-Process -FilePath $browser -ArgumentList $argList -RedirectStandardOutput $outFile -RedirectStandardError "$outFile.err" -PassThru -NoNewWindow
+
+# A headless browser can hang (for example if the computer sleeps mid-run). Give up after
+# the timeout and close only the browser processes that use this run's own profile folder.
+if (-not $p.WaitForExit($TimeoutMinutes * 60 * 1000)) {
+  $profileName = Split-Path $userDir -Leaf
+  Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -and $_.CommandLine.Contains($profileName) } | ForEach-Object {
+    try { Stop-Process -Id $_.ProcessId -Force -ErrorAction Stop } catch {}
+  }
+  Start-Sleep -Seconds 2
+  Remove-Item $outFile, "$outFile.err" -ErrorAction SilentlyContinue
+  Remove-Item $userDir -Recurse -Force -ErrorAction SilentlyContinue
+  Write-Output "The test browser did not finish within $TimeoutMinutes minutes and was closed."
+  exit 1
+}
+
 $html = Get-Content $outFile -Raw -Encoding UTF8
 Remove-Item $outFile, "$outFile.err" -ErrorAction SilentlyContinue
 Remove-Item $userDir -Recurse -Force -ErrorAction SilentlyContinue

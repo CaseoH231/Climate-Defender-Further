@@ -28,7 +28,7 @@ const FACT_EVERY = 3; // months between new climate facts
 // bigger, events nastier and the "game over" limits shorter. Lower years (down to 3) go easier.
 
 const SETTINGS_KEY = "climateDefenderSettings_dev1"; // kept separate so New Game doesn't reset it
-const settings = { difficulty: 6, quizzes: true, sound: true, volume: 0.5 };
+const settings = { difficulty: 6, quizzes: true, sound: true, volume: 0.5, elections: true };
 
 try {
   const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY));
@@ -37,6 +37,7 @@ try {
   if (saved && typeof saved.quizzes === "boolean") settings.quizzes = saved.quizzes;
   if (saved && typeof saved.sound === "boolean") settings.sound = saved.sound;
   if (saved && typeof saved.volume === "number") settings.volume = Math.min(1, Math.max(0, saved.volume));
+  if (saved && typeof saved.elections === "boolean") settings.elections = saved.elections;
 } catch (e) {}
 
 let DIFF = {}; // multipliers, filled in by applyDifficulty()
@@ -316,6 +317,7 @@ function renderPollutionReport() {
     ["🌎 Carbon capture", lastBreakdown.capture],
     ["🏙 City life", lastBreakdown.city || 0],
     ["🔥 Gas plants", lastBreakdown.gas || 0],
+    ["♻ Biogas plants", lastBreakdown.biogas || 0],
     ["🌱 Policies", lastBreakdown.programs || 0],
     ["🌦 Weather", lastBreakdown.weather],
   ].filter((row) => row[1] !== 0);
@@ -381,6 +383,7 @@ function answerQuiz(choice) {
   if (correct) {
     quizCorrect++;
     money += QUIZ_REWARD;
+    book("events", QUIZ_REWARD);
     el.quizFeedback.textContent = "✅ Correct! The city earned a $" + QUIZ_REWARD + " education bonus. " + question.explain;
     addNews("🧠 Quiz answered correctly! +$" + QUIZ_REWARD);
   } else {
@@ -423,7 +426,7 @@ function getPowerDemand() {
   // Demand also creeps up over time (more gadgets, more air conditioning), so standing still falls behind.
   const creep = 1 + totalMonths() * 0.003;
 
-  return Math.floor((population / 50) * prosperityDemand * creep * DIFF.demand * (currentWeather.demand ?? 1) * climateDemandFactor() * (1 - programEffect("demand")));
+  return Math.floor((population / 50) * prosperityDemand * creep * DIFF.demand * (currentWeather.demand ?? 1) * climateDemandFactor() * (1 - demandCut()));
 }
 
 function getEnergyBalance() {
@@ -462,12 +465,40 @@ function getNuclearAllowed() {
   return 1 + Math.floor((population - NUCLEAR_MIN_POP) / NUCLEAR_POP_PER_PLANT);
 }
 
-// Big cities cost more to run: every building past the 15th adds 2.5% to ALL upkeep (up to +150%).
+// Big cities cost more to run: every building past the 20th adds 2% to ALL upkeep (up to +100%).
 // The extra power plants (gas, hydro, geothermal, offshore) are not counted.
 function upkeepMultiplier() {
   const count = solar + wind + coal + forest + batteries + offices + factories + capturePlants + nuclearPlants;
 
-  return 1 + Math.min(1.5, Math.max(0, count - 15) * 0.025);
+  return 1 + Math.min(1, Math.max(0, count - 20) * 0.02);
+}
+
+// Policies and finished research add up. Each cut is capped at 90%.
+function demandCut() {
+  return Math.min(0.9, programEffect("demand") + techEffect("demand"));
+}
+
+function cityPollutionCut() {
+  return Math.min(0.9, programEffect("city") + techEffect("city"));
+}
+
+// Protection from one kind of bad weather ("heat", "fire" or "flood").
+function weatherShield(key) {
+  return Math.min(0.9, programEffect(key) + techEffect(key));
+}
+
+// Pollution one forest / one carbon capture plant removes each month.
+function forestCleaning() {
+  return (X.tipped.dieback ? 0.5 : 1) * (1 + techEffect("forest"));
+}
+
+function captureCleaning() {
+  return 4 + techEffect("capture");
+}
+
+// How much electricity all the batteries can hold.
+function batteryStore() {
+  return Math.round(batteries * BATTERY_CAPACITY * (1 + techEffect("battery")));
 }
 
 // Upkeep for every building this month, before the policies and nuclear waste.
@@ -520,6 +551,11 @@ function startResearch(type) {
 
   if (!project || project.unlocked) return;
 
+  if (missingNeeds(type).length) {
+    addNews("🔒 " + project.name + " needs " + needsText(type) + " first.");
+    return;
+  }
+
   if (project.requires && population < project.requires.population) {
     addNews("👥 " + project.name + " needs a population of " + project.requires.population.toLocaleString() + ".");
     return;
@@ -531,6 +567,7 @@ function startResearch(type) {
   }
 
   money -= project.cost;
+  book("research", -project.cost);
   activeResearch = type;
   researchProgress = 0;
 
@@ -563,23 +600,7 @@ function processResearch() {
   }
 }
 
-// Draws the research buttons once, using the information in research.js.
-const researchButtons = {};
-
-for (const id in researchProjects) {
-  const project = researchProjects[id];
-  const item = document.createElement("div");
-  const button = document.createElement("button");
-  const description = document.createElement("p");
-
-  item.className = "research-item";
-  description.textContent = project.description;
-  button.onclick = () => startResearch(id);
-
-  item.append(button, description);
-  el.researchButtons.append(item);
-  researchButtons[id] = button;
-}
+// The Research tab is drawn as a tech tree by renderResearch() in techtree.js.
 
 // ======================================
 // BUILDINGS
@@ -687,6 +708,7 @@ function acceptEvent() {
   const outcome = scaledOutcome(currentEvent.accept, true);
 
   money += outcome.money;
+  book("events", outcome.money);
   pollution += outcome.pollution;
   approval += outcome.approval;
   population += outcome.population;
@@ -701,6 +723,7 @@ function declineEvent() {
   const outcome = scaledOutcome(currentEvent.decline, false);
 
   money += outcome.money;
+  book("events", outcome.money);
   pollution += outcome.pollution;
   approval += outcome.approval;
   population += outcome.population;
@@ -786,7 +809,7 @@ function closeReport() {
 // GAME OVERS
 // ======================================
 
-function gameOver(title, reason, cause) {
+function gameOver(title, reason, cause, extraHTML = "") {
   gameEnded = true;
 
   try {
@@ -809,7 +832,7 @@ function gameOver(title, reason, cause) {
   ];
 
   el.gameOverText.innerHTML =
-    `<h3>${title}</h3><p>${reason}</p>` +
+    `<h3>${title}</h3><p>${reason}</p>` + extraHTML +
     rows.map(([name, value]) => `<div class="kv"><span>${name}</span><strong>${value}</strong></div>`).join("") +
     `<p class="final-score">⭐ Final score: ${score.toLocaleString()}</p>` +
     `<h4>💡 What could you try next time?</h4>` +
@@ -820,6 +843,8 @@ function gameOver(title, reason, cause) {
 }
 
 function checkGameOver() {
+  if (gameEnded) return; // already over (for example after losing an election)
+
   if (pollution >= POLLUTION_LIMIT) {
     gameOver("🌎 Climate Crisis", "Pollution reached catastrophic levels.", "pollution");
   } else if (X.temp >= 4) {
@@ -1007,10 +1032,20 @@ function nextMonth() {
   money += income;
   money -= maintenance;
 
+  // The same maintenance split into budget lines (budget.js), so players can see what the big-city extra costs.
+  const bigCityExtra = Math.floor(baseUpkeep() * lateGameMaintenanceMultiplier * DIFF.maintenance) - Math.floor(baseUpkeep() * DIFF.maintenance);
+
+  book("residents", income);
+  book("bigCity", -bigCityExtra);
+  book("policies", -programUpkeep());
+  book("waste", -nuclearWaste);
+  book("upkeep", -(maintenance - bigCityExtra - programUpkeep() - nuclearWaste));
+
   if (year > 2025 || (year === 2025 && month >= 3)) {
     const governmentTax = Math.floor((totalGDP / 5000000) ** 0.72 * DIFF.tax);
 
     money -= governmentTax;
+    book("govTax", -governmentTax);
 
     addNews("🏛 Government Tax: -$" + governmentTax);
   }
@@ -1020,30 +1055,34 @@ function nextMonth() {
     coal: coal * 2,
     solar: -solar,
     wind: -wind * 2,
-    forest: -Math.round(forest * (X.tipped.dieback ? 0.5 : 1)),
-    capture: -capturePlants * 4,
-    city: Math.round((population / 7000 + factories * 0.5) * DIFF.cityPollution * (1 - programEffect("city")) * (1 - X.carbonTax * 0.03)), // cars, rubbish, heating, factories
-    gas: extraPollution(),
+    forest: -Math.round(forest * forestCleaning()),
+    capture: -capturePlants * captureCleaning(),
+    city: Math.round((population / 7000 + factories * 0.5) * DIFF.cityPollution * (1 - cityPollutionCut()) * (1 - X.carbonTax * 0.03)), // cars, rubbish, heating, factories
+    gas: X.plants.gas * EXTRA_PLANTS.gas.pollution,
+    biogas: X.plants.biogas * EXTRA_PLANTS.biogas.pollution,
     programs: -programEffect("poll"),
     weather: 0,
   };
 
-  pollution += breakdown.coal + breakdown.solar + breakdown.wind + breakdown.forest + breakdown.capture + breakdown.city + breakdown.gas + breakdown.programs;
+  pollution += breakdown.coal + breakdown.solar + breakdown.wind + breakdown.forest + breakdown.capture + breakdown.city + breakdown.gas + breakdown.biogas + breakdown.programs;
   approval += programEffect("approval");
+  districtsMonth(); // smoky or leafy neighbourhoods (districts.js)
 
   climateMonth(breakdown); // CO2, temperature, sea level, tipping points
   economyMonth(breakdown); // carbon tax and loan interest
+  marketMonth(breakdown); // carbon credits and green grants (budget.js)
 
   // Electricity: spare power charges the batteries, then gets sold. Shortages draw from the batteries first.
   const energyBalance = getEnergyBalance();
 
   if (energyBalance > 0) {
-    const stored = Math.min(energyBalance, batteries * BATTERY_CAPACITY - batteryCharge);
+    const stored = Math.min(energyBalance, batteryStore() - batteryCharge);
     const sold = Math.min(energyBalance - stored, MAX_SOLD_MW);
     const electricityIncome = Math.round(sold * 1.5 * DIFF.price);
 
     batteryCharge += stored;
     money += electricityIncome;
+    book("power", electricityIncome);
     blackoutMonths = 0;
 
     if (stored > 0) addNews("🔋 Batteries saved " + stored + " MW of spare electricity.");
@@ -1069,6 +1108,9 @@ function nextMonth() {
   } else {
     blackoutMonths = 0;
   }
+
+  // Even with enough power overall, full power lines can black out some districts (grid.js).
+  gridMonth(energyBalance < 0);
 
   let growth = 0;
 
@@ -1140,6 +1182,7 @@ function nextMonth() {
       const bonus = wind * 20;
 
       money += bonus;
+      book("power", bonus);
       addNews("🌬 Wind turbines earned $" + bonus);
       break;
     }
@@ -1150,7 +1193,11 @@ function nextMonth() {
       break;
 
     case "Bushfire Season":
-      if (forest > 0 && Math.random() < 0.3 * (1 - programEffect("fire"))) destroyRandom("forest", "fire");
+      if (forest > 0 && Math.random() < 0.3 * (1 - weatherShield("fire"))) destroyRandom("forest", "fire");
+      break;
+
+    case "Storm System":
+      stormHitsGrid(); // a power line may go down for a month
       break;
   }
 
@@ -1177,8 +1224,10 @@ function nextMonth() {
   bankMonth(); // unpaid bills go onto the loan (programs.js)
   clampValues();
   updateHomes();
+  politicsMonth(); // group moods, protests and elections (politics.js)
   goalsMonth();
   recordHistory();
+  budgetMonth(); // close this month's books (budget.js)
 
   if (approval < 20) {
     lowApprovalMonths++;
@@ -1317,7 +1366,7 @@ function updateUI() {
   const demand = getPowerDemand();
   const balance = supply - demand;
   const climateScore = getClimateScore();
-  const batteryCapacity = batteries * BATTERY_CAPACITY;
+  const batteryCapacity = batteryStore();
 
   el.date.textContent = "📅 " + monthNames[month - 1] + " " + year;
   el.money.textContent = "$" + money.toLocaleString();
@@ -1382,31 +1431,15 @@ function updateUI() {
     el.researchBar.value = progressPercent;
   }
 
-  // Research buttons: show cost and time, and grey out what can't be started.
-  for (const id in researchButtons) {
-    const project = researchProjects[id];
-    const button = researchButtons[id];
-    const inProgress = activeResearch === id;
-    const tooSmall = project.requires && population < project.requires.population;
-
-    button.disabled = project.unlocked || inProgress || activeResearch !== null || money < project.cost || !!tooSmall;
-    const note = project.unlocked
-      ? "✅ Done"
-      : inProgress
-        ? "🔬 Researching..."
-        : tooSmall
-          ? "🔒 Needs " + project.requires.population.toLocaleString() + " people"
-          : "$" + project.cost + " · " + project.monthsRequired + " months";
-
-    button.className = "research-btn " + (project.unlocked ? "done" : inProgress ? "busy" : "");
-    button.title = project.description;
-    button.innerHTML = `<span class="ic">${project.icon}</span><span class="nm">${project.name}</span><span class="pr">${note}</span>`;
-  }
-
+  renderResearch(); // the tech tree (techtree.js)
   renderBuildMenu(); // buildings.js
   updateCityView();
   renderPollutionReport();
   renderExtras();
+  renderDistricts();
+  renderPeople();
+  renderElectionChip();
+  renderBudget();
 
   if (!gameEnded) saveGame();
 }

@@ -9,7 +9,7 @@ const X = {
   sea: 0, // sea level rise in cm since the game began
   floodShown: 0,
   tipped: {}, // tipping points already crossed
-  plants: { gas: 0, hydro: 0, geo: 0, offshore: 0 },
+  plants: { gas: 0, hydro: 0, geo: 0, offshore: 0, tidal: 0, biogas: 0 },
   programs: {}, // program id -> level
   carbonTax: 0, // 0 to 3
   loan: 0,
@@ -23,6 +23,9 @@ const X = {
   taxIncome: 0,
   goalStreak: 0,
   map: null, // the tile map (map.js)
+  grid: null, // power lines between districts (grid.js)
+  politics: null, // citizen groups and elections (politics.js)
+  budget: null, // budget lines, carbon market and green grants (budget.js)
   bankruptMonths: 0,
   mods: { coastal: 0.5, heat: 0, solarMul: 1, windMul: 1, baseDelta: 0, coalJobs: 0, sites: { hydro: 3, geo: 4, offshore: 6 } },
 };
@@ -95,6 +98,7 @@ function coastalFlooding() {
   population -= Math.round(level * 25 * hit);
   approval -= Math.min(2, level * 0.2 * hit);
   money -= Math.round(level * 40 * hit);
+  book("damage", -Math.round(level * 40 * hit));
 }
 
 // Hotter worlds have nastier weather: choose bad weather more often.
@@ -121,10 +125,10 @@ function pickWeather() {
 function scaledWeather(weather) {
   const severity = 1 + Math.max(0, X.temp - 1.1) * 0.3;
   const shield = {
-    Heatwave: programEffect("heat"),
-    "Bushfire Season": programEffect("fire"),
-    "Flooding Conditions": programEffect("flood"),
-    "Storm System": programEffect("flood") / 2,
+    Heatwave: weatherShield("heat"),
+    "Bushfire Season": weatherShield("fire"),
+    "Flooding Conditions": weatherShield("flood"),
+    "Storm System": weatherShield("flood") / 2,
   }[weather.name] || 0;
   const k = (value, badIfPositive) => ((badIfPositive ? value > 0 : value < 0) ? Math.round(value * severity * (1 - shield)) : value);
 

@@ -23,11 +23,23 @@ function toast(message, kind) {
 
 let audioCtx = null;
 
+// Browsers only allow sound after the player has clicked or pressed a key on the page.
+// Before that (for example right after a reload) the game just stays quiet.
+function canPlaySound() {
+  return navigator.userActivation ? navigator.userActivation.hasBeenActive : soundUnlocked;
+}
+
+let soundUnlocked = false; // fallback for browsers without navigator.userActivation
+
+document.addEventListener("pointerdown", () => (soundUnlocked = true), { once: true });
+document.addEventListener("keydown", () => (soundUnlocked = true), { once: true });
+
 function sfx(kind) {
-  if (settings.sound === false || settings.volume === 0) return;
+  if (settings.sound === false || settings.volume === 0 || !canPlaySound()) return;
 
   try {
     audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === "suspended") audioCtx.resume();
 
     const notes = { click: [520], build: [392, 587], sell: [440, 330], good: [523, 659], bad: [220, 165], win: [523, 659, 784, 1047], alert: [330, 330] }[kind] || [440];
     const volume = 0.12 * (settings.volume ?? 0.5); // 0.06 at the default 50%
@@ -204,6 +216,7 @@ function drawChart() {
 function openSettings() {
   document.getElementById("setDiff").value = settings.difficulty;
   document.getElementById("setQuiz").checked = settings.quizzes;
+  document.getElementById("setElections").checked = settings.elections !== false;
   document.getElementById("setSound").checked = settings.sound !== false;
   document.getElementById("setVolume").value = Math.round((settings.volume ?? 0.5) * 100);
   el.settingsModal.style.display = "block";
@@ -218,6 +231,11 @@ function closeSettings() {
 function applySetting(kind) {
   if (kind === "diff") setDifficulty(Number(document.getElementById("setDiff").value));
   if (kind === "quiz") setQuizzes(document.getElementById("setQuiz").checked);
+  if (kind === "elections") {
+    settings.elections = document.getElementById("setElections").checked;
+    saveSettings();
+    if (typeof updateUI === "function") updateUI();
+  }
   if (kind === "sound") {
     settings.sound = document.getElementById("setSound").checked;
     saveSettings();
@@ -274,5 +292,10 @@ function initExtras() {
   MODAL_IDS.push("scenarioModal", "settingsModal", "winModal");
 
   // Redraw the graph when its tab is opened.
-  document.getElementById("tabs").addEventListener("click", () => setTimeout(renderStats, 0));
+  document.getElementById("tabs").addEventListener("click", () => setTimeout(() => {
+    renderStats();
+    renderDistricts();
+    renderPeople();
+    renderBudget();
+  }, 0));
 }

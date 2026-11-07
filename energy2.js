@@ -7,6 +7,8 @@ const EXTRA_PLANTS = {
   hydro: { icon: "💧", name: "Hydro Dam", cost: 2500, mw: 80, upkeep: 20, pollution: 0, needs: "hydro", site: "hydro", tip: "80 MW. Needs a river site." },
   geo: { icon: "🌋", name: "Geothermal", cost: 2000, mw: 50, upkeep: 30, pollution: 0, needs: "geothermal", site: "geo", tip: "50 MW, steady day and night." },
   offshore: { icon: "🌊", name: "Offshore Wind", cost: 1800, mw: 90, upkeep: 35, pollution: 0, needs: "offshore", site: "offshore", tip: "90 MW, depends on wind." },
+  tidal: { icon: "🌀", name: "Tidal Generator", cost: 2200, mw: 45, upkeep: 30, pollution: 0, needs: "tidal", site: null, tip: "45 MW, steady with the tides." },
+  biogas: { icon: "♻", name: "Biogas Plant", cost: 900, mw: 25, upkeep: 15, pollution: -1, needs: "biogas", site: null, tip: "25 MW from waste, and it catches methane." },
 };
 
 function extraMW(id) {
@@ -29,15 +31,7 @@ function extraPower() {
 }
 
 function extraCleanMW() {
-  return extraMW("hydro") + extraMW("geo") + extraMW("offshore");
-}
-
-function extraPollution() {
-  let total = 0;
-
-  for (const id in EXTRA_PLANTS) total += X.plants[id] * EXTRA_PLANTS[id].pollution;
-
-  return total;
+  return extraMW("hydro") + extraMW("geo") + extraMW("offshore") + extraMW("tidal") + extraMW("biogas");
 }
 
 function extraMaintenance() {

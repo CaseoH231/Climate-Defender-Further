@@ -40,6 +40,25 @@ async function runMapTests() {
     check(s.id + ": still matches after 3 years of play", countsMatch(w) === "", countsMatch(w));
   }
 
+  // Many seeds per scenario: the special sites always fit and every map has a town hall.
+  for (const id of ["classic", "coastal", "desert", "mining", "island"]) {
+    w = await boot();
+    w.startScenario(id);
+
+    const bad = w.eval(`(() => {
+      const sites = X.mods.sites;
+      const count = (t) => [...Array(MAP_N).keys()].filter((i) => terrainAt(i) === t).length;
+      for (let seed = 1; seed <= 25; seed++) {
+        generateMap("${id}", seed * 7919);
+        if (count("rapids") !== sites.hydro || count("vent") !== sites.geo || count("shallow") !== sites.offshore) return "seed " + seed + ": rapids " + count("rapids") + ", vents " + count("vent") + ", shallow " + count("shallow");
+        if (!X.map.b[X.map.hall] || X.map.b[X.map.hall].t !== "hall") return "seed " + seed + ": no town hall";
+      }
+      return "";
+    })()`);
+
+    check(id + ": 25 different maps all fit their special sites", bad === "", bad);
+  }
+
   // Placement rules
   w = await boot();
   w.startScenario("classic");

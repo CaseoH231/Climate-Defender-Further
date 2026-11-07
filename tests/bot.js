@@ -6,7 +6,7 @@
 // works on top-level `let` variables as well as window functions.
 // ======================================================================
 
-const RESEARCH_ORDER = ["wind", "solar2", "battery", "greenCity", "electricBuses", "hydro", "geothermal", "offshore", "advancedSolar", "carbonCapture", "nuclear"];
+const RESEARCH_ORDER = ["wind", "solar2", "smartMeters", "battery", "greenCity", "electricBuses", "bikeLanes", "hydro", "biogas", "geothermal", "offshore", "advancedSolar", "solarRepower", "forestScience", "gridBatteries", "hvLines", "greenBuildings", "tidal", "floodWarning", "carbonCapture", "nuclear", "droughtCrops", "coolRoofs", "directAir"];
 const PROGRAM_ORDER = ["waste", "buses", "insulation", "farming", "smartgrid", "ev", "heatpumps"];
 
 // Counts that work on every version of the game.
@@ -14,6 +14,7 @@ const COUNT_EXPR = {
   solar: "solar", wind: "wind", coal: "coal", forest: "forest", battery: "batteries",
   capture: "capturePlants", nuclear: "nuclearPlants", office: "offices", factory: "factories",
   gas: "X.plants.gas", hydro: "X.plants.hydro", geo: "X.plants.geo", offshore: "X.plants.offshore",
+  tidal: "X.plants.tidal", biogas: "X.plants.biogas",
 };
 
 const LEGACY_BUILD = {
@@ -70,6 +71,10 @@ function makeBot(w) {
 
       if (open("gameOverModal")) return "lost";
       if (open("winModal")) return "won";
+      if (w.document.getElementById("electionModal") && open("electionModal")) {
+        w.closeElection();
+        continue;
+      }
       if (open("eventModal")) chooseEvent();
       else if (open("reportModal")) w.closeReport();
       else if (open("quizModal")) w.closeQuiz();
@@ -91,6 +96,8 @@ function makeBot(w) {
         if (!p || p.unlocked) continue;
         if ({ hydro: "hydro", geothermal: "geo", offshore: "offshore" }[id] && !g("X.mods.sites")[{ hydro: "hydro", geothermal: "geo", offshore: "offshore" }[id]]) continue; // no sites in this city
         if (p.requires && g("population") < p.requires.population) continue;
+        if (typeof w.missingNeeds === "function" && w.missingNeeds(id).length) continue; // tech tree: do the earlier project first
+        if (id === "tidal" && w.freeTilesFor("tidal") === 0) continue; // no coast
         if (money() >= p.cost + reserve) w.startResearch(id);
         break;
       }
@@ -100,9 +107,9 @@ function makeBot(w) {
     // then swap coal out once there is spare clean power.
     const demand = () => w.getPowerDemand();
     const weatherPower = () => g("getSolarOutput() + wind * WIND_MW + X.plants.offshore * EXTRA_PLANTS.offshore.mw");
-    const margin = () => Math.max(40, demand() * 0.12) + weatherPower() * 0.3 - g("batteries * BATTERY_CAPACITY") * 0.5;
+    const margin = () => Math.max(40, demand() * 0.12) + weatherPower() * 0.3 - g("batteryStore()") * 0.5;
     const balance = () => w.getEnergyBalance();
-    const steady = ["hydro", "geo", "offshore", "nuclear", "wind", "solar"];
+    const steady = ["hydro", "geo", "tidal", "biogas", "offshore", "nuclear", "wind", "solar"];
     const cheap = ["wind", "solar", "offshore", "hydro", "geo"];
 
     const buildPower = (options) => {
@@ -147,6 +154,13 @@ function makeBot(w) {
       if (!build("forest")) break;
     }
 
+    // Power lines: upgrade the busiest one when it is nearly full (or caused a blackout).
+    if (typeof w.gridLines === "function") {
+      const busy = w.gridLines().find((line) => line.level < 4 && (line.load >= 0.8 || g("Object.keys(X.grid.short).length") > 0 && line.load >= 0.6));
+
+      if (busy && money() >= g("LINE_COST")[busy.level + 1] + reserve) w.upgradeLine(busy.key);
+    }
+
     // Storage: more batteries as more power depends on the weather.
     if (g("batteryUnlocked") && count("battery") < 1 + weatherPower() / 250 && money() > 1500 + reserve) build("battery");
 
@@ -167,6 +181,25 @@ function makeBot(w) {
     }
 
     if (g("year") >= 2029 && g("X.carbonTax") === 0) w.setCarbonTax(1);
+
+    // Carbon market: join once the city cleans up more than it makes (the coach tip says so too).
+    if (typeof w.joinMarket === "function" && !g("X.budget.market")) {
+      const net = g("lastBreakdown ? Object.keys(lastBreakdown).reduce((s, k) => s + (k === 'weather' ? 0 : lastBreakdown[k]), 0) : 1");
+
+      if (net < 0 && money() >= g("MARKET_JOIN_COST") + reserve + 300) w.joinMarket();
+    }
+
+    // People: help unhappy groups, especially when an election is coming.
+    if (typeof w.supportGroup === "function" && g("X.politics")) {
+      const soon = w.monthsUntilElection() <= 8;
+      const groups = g("GROUPS").map((grp) => ({ id: grp.id, happy: w.groupHappiness(grp.id) })).sort((a, b) => a.happy - b.happy);
+
+      for (const grp of groups) {
+        const cost = g("SUPPORT")[grp.id].cost;
+
+        if ((grp.happy < 40 || (soon && grp.happy < 60)) && !g("X.politics.cooldown")[grp.id] && money() >= cost + reserve) w.supportGroup(grp.id);
+      }
+    }
   }
 
   return { handleModals, actions, g };

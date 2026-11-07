@@ -175,3 +175,111 @@ gameOverTips.bankrupt = [
   "Loans cost 1.5% interest every month. Borrow for things that pay you back, like power you can sell.",
   "If money runs out, unpaid bills go onto the loan. Keep a little money spare for bad months.",
 ];
+
+// ---------- STAGE 3: districts, air quality and planning ----------
+
+glossary.push(
+  { id: "airquality", icon: "😷", term: "Air quality", definition: "How clean the air is to breathe. Smoke from coal, gas and factories makes the air near them unhealthy, even when the greenhouse gas spreads around the whole world." },
+  { id: "urbanplanning", icon: "🏘", term: "Urban planning", definition: "Deciding where homes, shops, factories, parks and power go in a city, so people live well and the city works." },
+);
+
+quizQuestions.push(
+  { id: "q52", q: "Why do city planners keep factories and power stations away from homes?", options: ["Their smoke makes the air unhealthy to breathe nearby", "Factories are scared of houses", "Homes make factories dirty", "It makes electricity faster"], answer: 0, explain: "Local air pollution causes breathing problems, so planners put a gap, or a park, between industry and homes." },
+  { id: "q53", q: "How can trees and parks help a neighbourhood?", options: ["They clean the air, give shade and make people happier", "They make the air smokier", "They use lots of electricity", "They make it hotter in summer"], answer: 0, explain: "Trees catch dust, soak up CO₂, cool streets with shade and give people green places to relax." },
+  { id: "q54", q: "Coal smoke causes two problems. Which pair is right?", options: ["Local air pollution and global warming", "Earthquakes and tides", "Snow and hail", "Louder birds and longer days"], answer: 0, explain: "The smoke harms people nearby, and its CO₂ warms the whole planet. Clean power fixes both." },
+);
+
+coachTips.splice(5, 0, {
+  id: "smokyHomes", title: "😷 Smoke near homes", when: () => X.map && X.map.dn && neighbourhoodMood() <= -0.4,
+  text: "Some homes are right next to smoky coal plants, gas plants or factories, and the people there are unhappy. Use the 💨 Air view on the map to find them. Move industry away, or plant forests in between.",
+});
+
+coachTips.push({
+  id: "districtsIntro", title: "🏘 Your city has neighbourhoods", when: () => totalMonths() >= 8 && totalMonths() <= 20,
+  text: "Press 🏘 Districts on the map to see your neighbourhoods. The Districts tab shows how much power each one uses and makes, how much it pollutes, and how happy its people are.",
+});
+
+// ---------- STAGE 3: the power grid ----------
+
+glossary.push({ id: "grid", icon: "🔌", term: "Power grid", definition: "The network of power lines that carries electricity from power stations to homes and businesses. If a line is too small, places at the end of it can lose power even when there is enough electricity overall." });
+
+quizQuestions.push(
+  { id: "q55", q: "A city makes enough electricity, but one neighbourhood still has a blackout. What could be wrong?", options: ["The power lines to it are too small or broken", "The sun is too bright", "There are too many trees", "People used too little power"], answer: 0, explain: "Electricity has to travel through power lines. Full or damaged lines can't deliver it, so grids need upgrading as cities grow." },
+  { id: "q56", q: "Why are big new solar and wind farms often waiting to be connected?", options: ["The grid needs new power lines to carry their electricity", "They make no electricity", "They are too quiet", "They only work in winter"], answer: 0, explain: "In many countries, clean power projects wait years for grid connections. Building power lines is a big part of the energy transition." },
+);
+
+coachTips.splice(5, 0, {
+  id: "lineFull", title: "🔌 A power line is full", when: () => X.grid && Object.keys(X.grid.short).length > 0,
+  text: "Part of your city had a blackout because a power line was full, even though the city made enough electricity. Open the Districts tab and upgrade the red line, or build power closer to where people live.",
+});
+
+// ---------- STAGE 4: people and politics ----------
+
+glossary.push(
+  { id: "election", icon: "🗳", term: "Election", definition: "When people vote to choose their leaders. A mayor who wants to stay in charge has to keep enough voters happy." },
+  { id: "protest", icon: "📣", term: "Protest", definition: "When people gather to show they disagree with a decision. It's a peaceful way for citizens to be heard." },
+  { id: "justtransition", icon: "🎓", term: "Just transition", definition: "Making sure workers in polluting industries, like coal mining, get help and new jobs when those industries close." },
+);
+
+quizQuestions.push(
+  { id: "q57", q: "What is a 'just transition'?", options: ["Helping workers in polluting jobs find new work as those industries close", "Closing every factory overnight", "Moving the city to a new place", "Changing the city's name"], answer: 0, explain: "Climate action works better when nobody is left behind. Retraining coal workers for clean-energy jobs is one example." },
+  { id: "q58", q: "Why might families and young voters disagree about a carbon tax?", options: ["It cuts pollution, but it can also raise prices for families", "Young people pay no taxes", "Families like pollution", "It only affects farmers"], answer: 0, explain: "Many climate policies have costs and benefits for different people. Some countries give the tax money back to families to keep it fair." },
+  { id: "q59", q: "Why do leaders listen to many different groups before making big decisions?", options: ["Each group is affected differently, and all of them vote", "Only the biggest group matters", "It makes decisions slower on purpose", "Groups never disagree"], answer: 0, explain: "Good climate plans balance jobs, prices, health and the planet, so they keep enough people on side to last." },
+);
+
+coachTips.splice(2, 0, {
+  id: "electionSoon", title: "🗳 Election coming up", when: () => electionsOn() && X.politics && monthsUntilElection() <= 6 && monthsUntilElection() > 0 && voteShare() < neededVote() + 8,
+  text: "An election is coming and the vote is close. Open the 🗳 People tab to see which groups are unhappy and why, then use a support action or fix what bothers them most.",
+});
+
+coachTips.splice(5, 0, {
+  id: "angryGroup", title: "📣 Some people are very unhappy", when: () => X.politics && GROUPS.some((g) => groupHappiness(g.id) < 30),
+  text: "One group of citizens is very unhappy and may protest. Check the 🗳 People tab: it shows what they want, and a support action can win them back.",
+});
+
+coachTips.push({
+  id: "peopleIntro", title: "🗳 Not everyone wants the same thing", when: () => totalMonths() >= 4 && totalMonths() <= 14,
+  text: "Workers want jobs, families want clean air and low prices, businesses want growth, young voters want climate action, and farmers want good weather. The 🗳 People tab shows how each group feels, and there's an election every 4 years.",
+});
+
+// ---------- STAGE 5: the tech tree ----------
+
+glossary.push(
+  { id: "tidal", icon: "🌀", term: "Tidal power", definition: "Electricity from the tides. The Moon pulls the oceans in and out twice a day, so tidal power is very predictable." },
+  { id: "biogas", icon: "♻", term: "Biogas", definition: "Gas made by bacteria breaking down food scraps, manure and sewage. Burning it for power stops methane, a strong greenhouse gas, leaking into the air." },
+);
+
+quizQuestions.push(
+  { id: "q60", q: "Why is tidal power so predictable?", options: ["The tides follow the Moon, so we know when they'll come", "The sea is always calm", "It only works on sunny days", "Fish push the turbines"], answer: 0, explain: "Tides can be predicted years ahead, unlike wind or sunshine. The hard part is building machines that survive the sea." },
+  { id: "q61", q: "How does a biogas plant help the climate?", options: ["It burns methane from waste instead of letting it leak", "It plants trees", "It cools the ocean", "It makes the waste disappear by magic"], answer: 0, explain: "Methane traps much more heat than CO₂. Burning it turns it into CO₂ and water, which is much less harmful, and makes power too." },
+  { id: "q62", q: "Why do new technologies often build on older ones?", options: ["Scientists learn from earlier inventions", "Old inventions are always better", "They don't, every invention starts from nothing", "Because of the weather"], answer: 0, explain: "Offshore wind turbines grew out of land turbines, and big grid batteries grew out of phone and car batteries." },
+);
+
+coachTips.push({
+  id: "techTree", title: "🔬 Plan your research", when: () => totalMonths() >= 10 && totalMonths() <= 24 && activeResearch === null,
+  text: "Research is a tree: some projects unlock others. Clean energy brings new power stations, Storage & grid makes batteries and power lines better, and Adaptation protects you from extreme weather. Pick a path that fits your city.",
+});
+
+// ---------- STAGE 6: budget, carbon market and green grants ----------
+
+glossary.push(
+  { id: "subsidy", icon: "🏛", term: "Subsidy", definition: "Money a government gives to help pay for something it wants more of, like clean power, electric buses or home insulation." },
+  { id: "carboncredit", icon: "🌳", term: "Carbon credit", definition: "Proof that one amount of greenhouse gas was kept out of, or taken out of, the air. Companies buy credits to make up for pollution they can't cut yet." },
+  { id: "budget", icon: "📒", term: "Budget", definition: "A plan of the money coming in and going out. Cities have to balance what they spend on running things with what they invest for the future." },
+);
+
+quizQuestions.push(
+  { id: "q63", q: "What is a carbon credit?", options: ["Proof that some greenhouse gas was kept out of the air", "A coupon for free electricity", "A bank card made from trees", "A fine for driving too fast"], answer: 0, explain: "Credits can be sold to companies that still pollute. They only help if the clean-up is real and wouldn't have happened anyway." },
+  { id: "q64", q: "Why do governments give green grants (subsidies)?", options: ["To help pay for things they want more of, like clean power", "To make electricity dearer", "Because they have too much money", "To pay for more coal"], answer: 0, explain: "Subsidies make clean choices cheaper. Many countries pay part of the cost of solar panels, heat pumps or electric cars." },
+  { id: "q65", q: "A city earns $5,000 a month and spends $5,500. What will happen if nothing changes?", options: ["It will run out of money and have to borrow", "It will get richer", "Nothing, the numbers are the same", "The extra money appears by itself"], answer: 0, explain: "Spending more than you earn every month means debt keeps growing. Cutting costs or earning more balances the budget." },
+);
+
+coachTips.splice(3, 0, {
+  id: "losingMoney", title: "📉 The city is losing money", when: () => X.budget && X.budget.history.length >= 3 && X.budget.history.slice(-3).every((h) => h.running < 0),
+  text: "For three months in a row the city has spent more than it earned. Open the 💰 Budget tab to see where the money goes. Big-city upkeep and loan interest are often the hidden costs.",
+});
+
+coachTips.push({
+  id: "carbonMarket", title: "🌳 Sell your clean-up", when: () => X.budget && !X.budget.market && lastBreakdown && Object.keys(lastBreakdown).reduce((sum, key) => sum + (key === "weather" ? 0 : lastBreakdown[key]), 0) < 0,
+  text: "Your city now removes more pollution than it makes. Join the carbon market in the 🌍 Policy tab and get paid for every extra unit you clean up.",
+});

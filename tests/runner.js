@@ -136,7 +136,7 @@ async function runTrace() {
     bot.actions();
     w.nextMonth();
 
-    const news = g("newsLog").slice(0, 12).filter((n) => /Approval|approval|SHORTAGE|bills|TIPPING|Flood|flood|destroyed/.test(n)).map((n) => n.slice(0, 50));
+    const news = g("newsLog").slice(0, 12).filter((n) => /Approval|approval|SHORTAGE|bills|TIPPING|Flood|flood|destroyed|overloaded|batteries kept|protest|election|knocked/.test(n)).map((n) => n.slice(0, 50));
 
     log(
       (g("year") + "-" + g("month")).padEnd(9) + " " + String(g("money")).padStart(5) + " " + String(g("X.loan")).padStart(5) + " " +
@@ -144,6 +144,10 @@ async function runTrace() {
         String(g("coal")).padStart(4) + " " + String(g("solar")).padStart(5) + " " + String(g("wind")).padStart(4) + " " + String(g("forest")).padStart(6) + " " +
         String(g("X.plants.gas")).padStart(4) + "  " + news.join(" | "),
     );
+
+    if (typeof w.groupHappiness === "function" && (g("month") === 10 || g("month") === 4)) {
+      log("   groups: " + g("GROUPS").map((grp) => grp.id + " " + w.groupHappiness(grp.id) + " (mood " + g("X.politics.mood")[grp.id] + ")").join(", ") + " | vote " + w.voteShare() + "% need " + w.neededVote() + "% | jobLoss " + g("X.politics.jobLoss") + " tax " + g("X.carbonTax"));
+    }
 
     const state = bot.handleModals();
 

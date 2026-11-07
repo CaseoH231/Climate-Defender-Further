@@ -10,7 +10,7 @@ const PROGRAMS = [
   { id: "ev", group: "🚌 Transport", icon: "🔌", name: "Electric Cars", desc: "Cars without tailpipes. Charging uses a bit more power.", costs: [1200, 2500, 4000], upkeep: 10, eff: { city: 0.1, demand: -0.02 } },
   { id: "insulation", group: "🏠 Buildings", icon: "🧱", name: "Insulation", desc: "Warm homes need less energy.", costs: [700, 1400, 2400], upkeep: 8, eff: { demand: 0.05 } },
   { id: "heatpumps", group: "🏠 Buildings", icon: "♨", name: "Heat Pumps", desc: "Efficient heating and cooling.", costs: [1500, 2800, 4500], upkeep: 12, eff: { demand: 0.04, city: 0.05 } },
-  { id: "smartgrid", group: "🏠 Buildings", icon: "📡", name: "Smart Grid", desc: "Shares power around so less is wasted.", costs: [1000, 2000, 3500], upkeep: 12, eff: { demand: 0.06 } },
+  { id: "smartgrid", group: "🏠 Buildings", icon: "📡", name: "Smart Grid", desc: "Shares power around so less is wasted, and lets power lines carry more.", costs: [1000, 2000, 3500], upkeep: 12, eff: { demand: 0.06, grid: 0.15 } },
   { id: "farming", group: "🌾 Food & Waste", icon: "🌾", name: "Smart Farming", desc: "Farmers store carbon in healthy soil.", costs: [900, 1800, 3000], upkeep: 20, eff: { poll: 2 } },
   { id: "waste", group: "🌾 Food & Waste", icon: "♻", name: "Recycling & Compost", desc: "Less rubbish rotting and making methane.", costs: [600, 1300, 2200], upkeep: 15, eff: { poll: 2, approval: 0.2 } },
   { id: "seawall", group: "🛡 Be Ready", icon: "🧱", name: "Sea Walls", desc: "Holds back 2 levels of flooding each.", costs: [1500, 3000, 5000], upkeep: 18, eff: { seawall: 2 } },
@@ -49,6 +49,7 @@ function upgradeProgram(id) {
   if (!canBuy(cost)) return;
 
   money -= cost;
+  book("programs", -cost);
   X.programs[id] = level + 1;
 
   if (program.eff.demand > 0) learnTerm("efficiency");
@@ -91,6 +92,7 @@ function borrow(amount) {
 
   X.loan += amount;
   money += amount;
+  book("loan", amount);
   learnTerm("interest");
 
   addNews("🏦 Borrowed $" + amount.toLocaleString() + ". You pay 1.5% interest every month.");
@@ -107,6 +109,7 @@ function repay(amount) {
 
   X.loan -= pay;
   money -= pay;
+  book("loan", -pay);
 
   addNews("🏦 Repaid $" + pay.toLocaleString() + ".");
   sfx("click");
@@ -121,6 +124,7 @@ function bankMonth() {
 
     X.loan += shortfall;
     money = 0;
+    book("loan", shortfall); // the bank paid the bills
     learnTerm("interest");
     addNews("🏦 The city couldn't pay its bills, so $" + shortfall.toLocaleString() + " was added to the bank loan.");
   }
@@ -145,6 +149,7 @@ function economyMonth(breakdown) {
   if (X.carbonTax > 0) {
     X.taxIncome = Math.round(grossEmissions(breakdown) * 8 * X.carbonTax);
     money += X.taxIncome;
+    book("carbonTax", X.taxIncome);
     // People notice higher prices, but only while there is something to tax.
     if (X.taxIncome > 0) approval -= 0.15 * X.carbonTax;
     if (X.taxIncome > 0) addNews("💲 Carbon tax raised $" + X.taxIncome + ".");
@@ -154,6 +159,7 @@ function economyMonth(breakdown) {
     const interest = Math.ceil(X.loan * 0.015);
 
     money -= interest;
+    book("interest", -interest);
     addNews("🏦 Loan interest: -$" + interest);
   }
 }
@@ -169,6 +175,7 @@ const EFFECT_TEXT = {
   fire: (v) => ["−" + Math.round(v * 100) + "% bushfire damage", true],
   heat: (v) => ["−" + Math.round(v * 100) + "% heatwave damage", true],
   flood: (v) => ["−" + Math.round(v * 100) + "% flood & storm damage", true],
+  grid: (v) => ["+" + Math.round(v * 100) + "% power line capacity", true],
 };
 
 function programChips(p) {
@@ -245,4 +252,6 @@ function renderPolicies() {
       `<button onclick="borrow(3000)" ${X.loan + 3000 > limit ? "disabled" : ""}>Borrow $3,000</button>` +
       `<button onclick="repay(1000)" ${X.loan <= 0 || money < 1 ? "disabled" : ""}>Repay $1,000</button></div>`,
   );
+
+  setHTML(document.getElementById("marketBox"), marketBoxHTML()); // budget.js
 }

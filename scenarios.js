@@ -100,6 +100,12 @@ function startScenario(id) {
   X.scenario = scenario.id;
   generateMap(scenario.id, Math.floor(Math.random() * 1e9));
   syncMapWithCounts();
+  X.grid = null;
+  ensureGrid(); // lines sized for the starting city
+  X.politics = null;
+  ensurePolitics(); // politics.js
+  X.budget = null;
+  ensureBudget(); // fresh books (budget.js)
   X.started = true;
   X.goalStreak = 0;
 

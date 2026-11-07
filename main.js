@@ -15,7 +15,11 @@ if (loadedSave) addNews("💾 Welcome back! Your saved game was loaded.");
 else updateCoach(true);
 
 ensureMap(); // saves from before the tile map get a map built around their buildings
+ensureDistricts(); // and maps from before districts get districts
 syncMapWithCounts();
+ensureGrid(); // and power lines
+ensurePolitics(); // and citizen groups
+ensureBudget(); // and the budget books
 initExtras();
 initMapInput();
 randomFact();
